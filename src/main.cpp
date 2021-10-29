@@ -7,14 +7,75 @@
 #include <fstream>
 #include <stdbool.h>
 #include <string.h>
+#include <vector>
+#include <ios>
 namespace fs = std::filesystem;
-void add(std::string addPath,std::string reqPath)
-{
-    if(addPath==".")
+std::string setPath;
+// void addToCache(std::string addPath)
+// {
+
+// }
+bool ignoreCheck(std::string pathFile){
+    std::string getData;
+    std::ifstream readData(".imperiumIgnore");
+    while(getline(readData,getData))
     {
-        std::cout<<fs::current_path()<<"\n";
-        std::cout<<reqPath<<"\n";
-    } 
+        if(getData==pathFile || pathFile.find(getData)!=std::string::npos){
+            return true;
+        }
+    }
+    return false;
+}
+bool toBeIgnored(std::string pathFile){
+    std::string getData;
+    std::ifstream readData("/.imperium/add.log");
+    while(getline(readData,getData))
+    {
+        if(getData==pathFile){
+            return true;
+        }
+    }
+    return ignoreCheck(pathFile);
+}
+void add(std::vector<std::string> paths)
+{
+    std::string root = setPath;
+    std::ofstream writeData;
+    writeData.open(setPath+"/.imperium/add.log",std::ios_base::app);
+    if(paths[0]==".")
+    {
+        for(auto& it: fs::recursive_directory_iterator(root))
+        {
+            std::string fileCheck = it.path();
+            if(toBeIgnored(fileCheck)==false){
+               writeData<<fileCheck<<"\n"; 
+            }
+        }
+        writeData.close();
+
+    } else {
+        struct stat *check;
+        if(stat((setPath+"/.imperium/add.log").c_str(),check)){
+            std::string prev="";
+            std::ifstream readFile(setPath+"/.imperium/add.log");
+            std::cout<<"Previous Files are => \n";
+            while(getline(readFile,prev))
+            {
+                std::cout<<prev<<"\n";
+            }
+        }
+        for(auto it: paths){
+            struct stat *buf;
+            if(stat((setPath+"/"+it).c_str(),buf)){
+                if(toBeIgnored(setPath+"/"+it)==false){
+                    writeData<<setPath+"/"+it+"\n";
+                }
+            } else {
+                std::cout<<"Wrong file chosen\n";
+            }
+        }
+        writeData.close();;
+    }
 }
 void init(std::string path)
 {
@@ -78,14 +139,18 @@ int main(int argc, char const *argv[])
 {
     chdir(getenv("dir"));
     std::string getpath = fs::current_path();
+    setPath = getpath;
     if(!strcmp("init",argv[1])){
         std::cout<<"\nProcessing....................\n";
         std::string ins_var = (getenv("dir"));
         init(ins_var);
     }
     else if(!strcmp("add",argv[1])){
-        std::string req_path = fs::current_path();
-        add(argv[2],req_path);
+        std::vector<std::string> argVars;
+        for(int i=2;i<argc;i++){
+            argVars.push_back(argv[i]);
+        }
+        add(argVars);
     }
     else{
         std::cout<<"Command entered is wrong\n";
