@@ -10,14 +10,44 @@
 #include <vector>
 #include <ios>
 #include <utility>
-#include <map> 
+#include <map>
 #include <unordered_map>
 namespace fs = std::filesystem;
 std::string setPath;
-// void addToCache(std::string addPath)
-// {
-
-// }
+void addToCache(std::string addPath, char fileType)
+{
+    struct stat p;
+    if (stat((setPath + "/.imperium/.add").c_str(), &p) != 0)
+        mkdir((setPath + "/.imperium/.add").c_str(), 0777);
+    addPath = addPath.substr(1, addPath.length() - 1);
+    if (fileType == 'f')
+    {
+        struct stat r;
+        std::string src = setPath + "/" + addPath;
+        std::string fileAdd, dest = setPath + "/.imperium/.add/" + addPath;
+        if (addPath.find_last_of('/') != std::string::npos)
+        {
+            fileAdd = setPath + "/.imperium/.add/" + addPath.substr(0, addPath.find_last_of('/'));
+            std::cout << fileAdd << "\n";
+            if (stat(fileAdd.c_str(), &r) != 0)
+            {
+                fs::create_directories(fileAdd);
+            }
+        }
+        fs::copy_file(src, dest, fs::copy_options::overwrite_existing);
+    }
+    else if (fileType == 'd')
+    {
+        struct stat r;
+        std::string src = setPath + "/" + addPath;
+        std::string fileAdd = setPath + "/.imperium/.add/" + addPath.substr(0, addPath.find_last_of('/'));
+        std::string dest = setPath + "/.imperium/.add/" + addPath;
+        if (stat(fileAdd.c_str(), &r) != 0)
+        {
+            fs::create_directories(fileAdd);
+        }
+    }
+}
 bool ignoreCheck(std::string pathFile)
 {
     std::string getData;
@@ -50,7 +80,7 @@ bool fileDirException(std::string getPath)
     std::ifstream readData(setPath + "/.imperium/add.log");
     while (getline(readData, getData))
     {
-        if ((getPath+"/").substr(0, (getData+'/').length()) == (getData+"/"))
+        if ((getPath + "/").substr(0, (getData + '/').length()) == (getData + "/"))
         {
             return false;
         }
@@ -59,7 +89,6 @@ bool fileDirException(std::string getPath)
 }
 void add(std::vector<std::string> paths)
 {
-    std::vector<std::pair<std::string, char>> pathParams;
     std::string root = setPath;
     if (paths[0] == ".")
     {
@@ -74,17 +103,16 @@ void add(std::vector<std::string> paths)
                 std::ofstream writeData;
                 writeData.open(setPath + "/.imperium/add.log", std::ios_base::app);
                 struct stat checkType;
-                if (fileDirException(relativePath))
                 {
                     if (stat(fileCheck.c_str(), &checkType) == 0)
                     {
                         if (checkType.st_mode & S_IFDIR)
                         {
-                            pathParams.push_back({relativePath, 'd'});
+                            addToCache(relativePath, 'd');
                         }
                         else if (checkType.st_mode & S_IFREG)
                         {
-                            pathParams.push_back({relativePath, 'f'});
+                            addToCache(relativePath, 'f');
                         }
                     }
                     writeData << relativePath << "\n";
@@ -99,6 +127,39 @@ void add(std::vector<std::string> paths)
                   << "\n";
         for (auto it : paths)
         {
+            struct stat checkType;
+            {
+                if (stat((setPath + "/" + it).c_str(), &checkType) == 0)
+                {
+                    if (checkType.st_mode & S_IFDIR)
+                    {
+                        for (auto &it2 : fs::recursive_directory_iterator(setPath + "/" + it))
+                        {
+                            std::string relpath = it2.path();
+                            relpath = relpath.substr(setPath.length() + 1, relpath.length() - setPath.length() - 1);
+                            struct stat checkType2;
+                            {
+                                if (stat((relpath).c_str(), &checkType2) == 0)
+                                {
+                                    if (checkType2.st_mode & S_IFDIR)
+                                    {
+                                        addToCache("/" + relpath, 'd');
+                                    }
+                                    else if (checkType2.st_mode & S_IFREG)
+                                    {
+                                        std::cout<<"No error here"<<"\n";
+                                        addToCache("/" + relpath, 'f');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (checkType.st_mode & S_IFREG)
+                    {
+                        addToCache("/" + it, 'f');
+                    }
+                }
+            }
             struct stat *buf;
             if (stat((setPath + "/" + it).c_str(), buf))
             {
@@ -111,26 +172,20 @@ void add(std::vector<std::string> paths)
                         std::ofstream writeData;
                         writeData.open(setPath + "/.imperium/add.log", std::ios_base::app);
                         struct stat checkType;
-                        if (fileDirException("/" + it))
                         {
                             if (stat((setPath + "/" + it).c_str(), &checkType) == 0)
                             {
                                 if (checkType.st_mode & S_IFDIR)
                                 {
-                                    pathParams.push_back({"/" + it, 'd'});
+                                    addToCache("/" + it, 'd');
                                 }
                                 else if (checkType.st_mode & S_IFREG)
                                 {
-                                    pathParams.push_back({"/" + it, 'f'});
+                                    addToCache("/" + it, 'f');
                                 }
                             }
-                            writeData << "/" + it << "\n";
                         }
-                        else
-                        {
-                            std::cout << "File exists already"
-                                      << "\n";
-                        }
+                        writeData << "/" + it << "\n";
                         writeData.close();
                     }
                 }
@@ -141,10 +196,6 @@ void add(std::vector<std::string> paths)
                           << "\n";
             }
         }
-    }
-    for (auto it : pathParams)
-    {
-        std::cout << it.first << " " << it.second << "\n";
     }
 }
 void init(std::string path)
