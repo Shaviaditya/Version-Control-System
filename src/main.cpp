@@ -100,7 +100,7 @@ void addPrevCommit(std::string addPath, char fileType, std::string commitHash, s
         if (fileType == 'f')
         {
             struct stat resource;
-            std::string commitPath = setPath + "/.imperium/.commit/"; 
+            std::string commitPath = setPath + "/.imperium/.commit/";
             std::string src = commitPath + prevHash + "/" + addPath;
             std::string fileAdd, dest = commitPath + commitHash + "/" + addPath;
             if (addPath.find_last_of('/') != std::string::npos)
@@ -117,7 +117,7 @@ void addPrevCommit(std::string addPath, char fileType, std::string commitHash, s
         else
         {
             struct stat r;
-            std::string commitPath = setPath + "/.imperium/.commit/"; 
+            std::string commitPath = setPath + "/.imperium/.commit/";
             std::string src = commitPath + prevHash + "/" + addPath;
             std::string fileAdd, dest = commitPath + commitHash + "/" + addPath;
             fileAdd = commitPath + commitHash + "/" + addPath.substr(0, addPath.find_last_of('/'));
@@ -397,6 +397,7 @@ void commit(int argc, char const *argv[])
                 getHash = getData.substr(0, getData.find("--") - 1);
                 break;
             }
+            readData.close();
             std::string hashdir = commitPath1 + "/" + getHash;
             for (auto &it : fs::recursive_directory_iterator(hashdir))
             {
@@ -419,6 +420,86 @@ void commit(int argc, char const *argv[])
             }
             updateCommitLog(argv[3], hashVar);
         }
+    }
+}
+
+void getCommitLog()
+{
+    std::ifstream readFile(setPath + "/.imperium/.commit.log");
+    std::string paths;
+    while (getline(readFile, paths))
+    {
+        std::cout << paths << "\n";
+    }
+    readFile.close();
+}
+
+void checkout(char const *argv[])
+{
+
+    std::string route = setPath + "/.imperium/.commit.log", check = "";
+    bool dirExist = false;
+    std::ifstream readFile(route);
+    while (getline(readFile, check))
+    {
+        if (check.find(argv[2]) != std::string::npos)
+        {
+            dirExist = true;
+            break;
+        }
+    }
+    if (dirExist)
+    {
+        std::string src = setPath + "/.imperium/.commit/" + argv[2];
+        /*
+        for(auto &it : fs::recursive_directory_iterator(setPath)){
+            if(ignoreCheck(it.path())==false){
+                std::cout<<it.path()<<"\n";
+                struct stat path;
+                if(stat(it.path().c_str(),&path)==0){
+                    if(path.st_mode & S_IFDIR){
+                        std::string stp = it.path();
+                        system(("rm -r "+stp).c_str());
+                    } else {
+                        fs::remove(it.path());
+                    }
+                }
+            }
+        }
+        */
+        for (auto &it : fs::recursive_directory_iterator(src))
+        {
+            std::string relPath = it.path();
+            relPath = relPath.substr(src.length(), relPath.length() - (src.length()));
+            struct stat checkType;
+            {
+                if (stat((setPath + relPath).c_str(), &checkType) == 0)
+                {
+                    if (checkType.st_mode & S_IFDIR)
+                    {
+                        fs::copy(it.path(), setPath + relPath, fs::copy_options::overwrite_existing);
+                    }
+                    else if (checkType.st_mode & S_IFREG)
+                    {
+                        fs::copy_file(it.path(), setPath + relPath, fs::copy_options::overwrite_existing);
+                    }
+                } else {
+                    struct stat check2;
+                    if(stat(it.path().c_str(),&check2)==0){
+                        if(check2.st_mode & S_IFDIR)
+                            fs::create_directories((setPath + relPath));
+                        else
+                            fs::copy_file(it.path(), setPath + relPath, fs::copy_options::overwrite_existing); 
+                    }
+                    // fs::copy(it.path(), setPath + relPath, fs::copy_options::overwrite_existing);
+                }
+            }
+        }
+    }
+    else
+    {
+        std::cout << "No such commit exists."
+                  << "\n";
     }
 }
 
@@ -500,9 +581,17 @@ int main(int argc, char const *argv[])
         }
         add(argVars);
     }
-    else if (!strcmp("commit", argv[1]))
+    else if (!strcmp("commit", argv[1]) && !strcmp("-m", argv[2]))
     {
         commit(argc, argv);
+    }
+    else if (!strcmp("commit-logs", argv[1]))
+    {
+        getCommitLog();
+    }
+    else if (!strcmp("checkout", argv[1]))
+    {
+        checkout(argv);
     }
     else
     {
