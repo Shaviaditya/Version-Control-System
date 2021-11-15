@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <openssl/sha.h>
 #include <filesystem>
 #include <unistd.h>
 #include <string>
@@ -12,6 +13,9 @@
 #include <utility>
 #include <map>
 #include <unordered_map>
+#include <chrono>
+#include <ctime>
+#include <queue>
 namespace fs = std::filesystem;
 std::string setPath;
 void addToCache(std::string addPath, char fileType)
@@ -48,6 +52,39 @@ void addToCache(std::string addPath, char fileType)
         }
     }
 }
+
+void addCommit(std::string addPath, char fileType, std::string commitHash)
+{
+    struct stat filecheck;
+    std::string commitPath = setPath+"/.imperium/.commit"; 
+    if(stat((commitPath+"/"+commitHash).c_str(),&filecheck)!=0)
+        mkdir((commitPath+"/"+commitHash).c_str(),0777);
+        commitPath = commitPath + "/" + commitHash + "/";
+    if(fileType=='f'){
+        struct stat resource;
+        std::string src = setPath+"/.imperium/.add/"+addPath;
+        std::string fileAdd, dest = commitPath + addPath;
+        if (addPath.find_last_of('/') != std::string::npos)
+        {
+            fileAdd = commitPath + addPath.substr(0, addPath.find_last_of('/'));
+            std::cout << fileAdd << "\n";
+            if (stat(fileAdd.c_str(), &resource) != 0)
+            {
+                fs::create_directories(fileAdd);
+            }
+        }
+        fs::copy_file(src, dest, fs::copy_options::overwrite_existing);
+    } else {
+        struct stat r;
+        std::string src = setPath+"/.imperium/.add/"+addPath;
+        std::string fileAdd = commitPath + addPath.substr(0, addPath.find_last_of('/')), dest = commitPath + addPath;
+        if (stat(fileAdd.c_str(), &r) != 0)
+        {
+            fs::create_directories(fileAdd);
+        }
+    }
+}
+
 bool ignoreCheck(std::string pathFile)
 {
     std::string getData;
@@ -147,7 +184,8 @@ void add(std::vector<std::string> paths)
                                     }
                                     else if (checkType2.st_mode & S_IFREG)
                                     {
-                                        std::cout<<"No error here"<<"\n";
+                                        std::cout << "No error here"
+                                                  << "\n";
                                         addToCache("/" + relpath, 'f');
                                     }
                                 }
@@ -198,6 +236,105 @@ void add(std::vector<std::string> paths)
         }
     }
 }
+
+void updateCommitLog(char const *message, std::string commitHash)
+{
+    std::string line;
+    std::ifstream readData;
+    readData.open(setPath+"/.imperium/.commit.log");
+    int c = 0;
+    std::vector<std::string> log_cont;
+    while(getline(readData,line)){
+        if(line.find("-->")==std::string::npos){
+            log_cont.push_back(line);
+        } else {
+            log_cont.push_back(line.substr(0,line.find("-->")-1));
+        }
+    }
+    readData.close();
+    system(("rm -r " +setPath+"/.imperium/.commit.log").c_str());
+    if(log_cont.size()==0){
+        std::ofstream writeIn(setPath+"/.imperium/.commit.log");
+        std::string msg = commitHash+" -- "+message+" --> HEAD";
+        writeIn<<msg<<"\n";
+        writeIn.close();
+    } else {
+        std::queue<std::string> stk;
+        std::string currentMsg = commitHash+" -- "+message+" --> HEAD";
+        stk.push(currentMsg);
+        for(auto it: log_cont){
+            stk.push(it);
+        }
+        std::ofstream writeIn(setPath+"/.imperium/.commit.log");
+        while(!stk.empty()){
+            writeIn<<stk.front()<<"\n";
+            stk.pop();
+        }
+        writeIn.close();
+    }
+}
+
+void commit(int argc, char const *argv[])
+{
+    struct stat pathCheck;
+    if (argv[3] == "")
+    {
+        std::cout << "No Description Found!"
+                  << "\n";
+    }
+    else if (stat((setPath + "/.imperium").c_str(), &pathCheck) != 0)
+    {
+        std::cout << "No Imperium folder found, initialise one using [ imperium init ] "
+                  << "\n";
+    }
+    else
+    {
+        auto timehash = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        std::string ins_string = std::to_string(timehash).c_str();
+        unsigned char in_buffer[40];
+        for (int i = 0; i < ins_string.length(); i++)
+        {
+            in_buffer[i] = ins_string[i];
+        }
+        unsigned char out_buffer[20];
+        SHA1(in_buffer, ins_string.length(), out_buffer);
+        std::string ss;
+        ss.resize(41);
+        int use = 0;
+        for(int i=0;i<20;i++){
+            use+=sprintf(&ss[use],"%02x",out_buffer[i]);
+        }
+        ss.resize(use);
+        std::string hashVar = ss;
+        struct stat p;
+        if (stat((setPath + "/.imperium/.commit").c_str(), &p) != 0)
+            mkdir((setPath + "/.imperium/.commit").c_str(), 0777);
+        for (auto &it : fs::recursive_directory_iterator(setPath + "/.imperium/.add"))
+        {
+            std::string fileTypeDef = it.path();
+            std::string relativePath = fileTypeDef.substr((setPath + "./imperium/.add").length()+1,fileTypeDef.length()-((setPath + "./imperium/.add").length()+1));
+            struct stat checkType;
+            {
+                if (stat(fileTypeDef.c_str(), &checkType) == 0)
+                {
+                    if (checkType.st_mode & S_IFDIR)
+                    {
+                        addCommit(relativePath, 'd', hashVar);
+                    }
+                    else if (checkType.st_mode & S_IFREG)
+                    {
+                        addCommit(relativePath, 'f', hashVar);
+                    }
+                }
+            }
+        }
+        std::string rmstr = setPath+"/.imperium/";
+        system(("rm -r "+rmstr+".add").c_str());
+        system(("rm -r "+rmstr+"add.log").c_str());
+        updateCommitLog(argv[3],hashVar);
+    }
+}
+
 void init(std::string path)
 {
     struct stat *buf;
@@ -275,6 +412,10 @@ int main(int argc, char const *argv[])
             argVars.push_back(argv[i]);
         }
         add(argVars);
+    }
+    else if (!strcmp("commit", argv[1]))
+    {
+        commit(argc, argv);
     }
     else
     {
