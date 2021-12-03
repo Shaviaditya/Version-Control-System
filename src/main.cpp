@@ -16,6 +16,7 @@
 #include <chrono>
 #include <ctime>
 #include <queue>
+#include <algorithm>
 namespace fs = std::filesystem;
 std::string setPath;
 void addToCache(std::string addPath, char fileType)
@@ -97,7 +98,7 @@ bool checkExistence(std::string filepath)
 
 void addPrevCommit(std::string addPath, char fileType, std::string commitHash, std::string prevHash)
 {
-    if (checkExistence(addPath) && checkExistence(".imperium/.commit/"+prevHash+"/"+addPath))
+    if (checkExistence(addPath) && checkExistence(".imperium/.commit/" + prevHash + "/" + addPath))
     {
         struct stat checkExist;
         std::string commitPath = setPath + "/.imperium/.commit";
@@ -462,7 +463,7 @@ void commit(int argc, char const *argv[])
                 }
                 std::string rmstr = setPath + "/.imperium/";
                 system(("rm -r " + rmstr + ".add").c_str());
-                system(("rm -r " + rmstr + "add.log").c_str());
+                // system(("rm -r " + rmstr + "add.log").c_str());
             }
             updateCommitLog(argv[3], hashVar);
         }
@@ -610,6 +611,135 @@ void init(std::string path)
     }
     printf("Repositiory Initialized\n");
 }
+
+int BUFFER_SIZE = 8192;
+
+int compareFiles(std::string path1, std::string path2)
+{
+
+    std::ifstream lFile(path1.c_str(), std::ifstream::in | std::ifstream::binary);
+    std::ifstream rFile(path2.c_str(), std::ifstream::in | std::ifstream::binary);
+
+    if (!lFile.is_open() || !rFile.is_open())
+    {
+        return 1;
+    }
+
+    char *lBuffer = new char[BUFFER_SIZE]();
+    char *rBuffer = new char[BUFFER_SIZE]();
+
+    do
+    {
+        lFile.read(lBuffer, BUFFER_SIZE);
+        rFile.read(rBuffer, BUFFER_SIZE);
+        int numberOfRead = lFile.gcount(); // I check the files with the same size
+        if (numberOfRead != rFile.gcount())
+            return 1;
+
+        if (memcmp(lBuffer, rBuffer, numberOfRead) != 0)
+        {
+            memset(lBuffer, 0, numberOfRead);
+            memset(rBuffer, 0, numberOfRead);
+            return 1;
+        }
+    } while (lFile.good() || rFile.good());
+
+    delete[] lBuffer;
+    delete[] rBuffer;
+
+    return 0;
+}
+
+std::string getheadHash()
+{
+    std::string getData, getHash = "";
+    std::ifstream readData(setPath + "/.imperium/.commit.log");
+    while (getline(readData, getData))
+    {
+        getHash = getData.substr(0, getData.find("--") - 1);
+        break;
+    }
+    readData.close();
+    return getHash;
+}
+
+void status()
+{
+    std::vector<std::string> staged, unstaged;
+    std::string headHash = getheadHash();
+    if (checkExistence(".imperium/.add") && checkExistence(".imperium/.commit"))
+    {
+        if (checkExistence(".imperium/add.log"))
+        {
+            std::ifstream readFile(setPath + "/.imperium/add.log");
+            std::string line;
+            while (getline(readFile, line))
+            {
+                if (!checkExistence(".imperium/.commit/getHash/" + line))
+                {
+                    staged.push_back("created : ");
+                    staged.push_back(line);
+                }
+                else
+                {
+                    staged.push_back("modified : ");
+                    staged.push_back(line);
+                }
+                if (compareFiles(setPath + "/" + line, setPath + "/.imperium/.add" + line))
+                {
+                    unstaged.push_back("modified : ");
+                    unstaged.push_back(line);
+                }
+            }
+            readFile.close();
+        }
+    }
+    else if (checkExistence(".imperium/.commit"))
+    {
+        for (auto it : fs::recursive_directory_iterator(setPath))
+        {
+            if (ignoreCheck(it.path()) && !toBeIgnored(it.path()))
+            {
+                continue;
+            }
+            std::string ins_path = it.path();
+            std::string relpath = ins_path.substr(setPath.length() + 1, ins_path.length() - setPath.length() - 1);
+            if(relpath.find(".imperium")!=std::string::npos){
+                continue;
+            }
+            // std::cout << relpath << "\n";
+            std::string commitPath = setPath + "/.imperium/.commit/" + headHash + "/" + relpath;
+            // auto it2 =  std::find(staged.begin(), staged.end(), relpath);
+            // std::cout<<setPath+"/"+".imperium/.commit/" + headHash + "/" + relpath<<"\n";
+            if (!checkExistence(".imperium/.commit/" + headHash + "/" + relpath))
+            {
+                unstaged.push_back("created :");
+                unstaged.push_back(relpath);
+            }
+            else
+            {
+                if (checkExistence(".imperium/.commit/" + headHash + "/" + relpath))
+                {
+                    if (compareFiles(it.path(), commitPath))
+                    {
+                        unstaged.push_back("modified : ");
+                        unstaged.push_back(relpath);
+                    }
+                }
+            }
+        }
+    }
+    std::cout<<"Staged Changes : "<<"\n";
+    for(int i=0;i<staged.size();i+=2){
+        std::cout<<staged[i]<<" "<<staged[i+1]<<"\n";
+    }
+    std::cout<<"UnStaged Changes : "<<"\n";
+    for(int i=0;i<unstaged.size();i+=2){
+        std::cout<<unstaged[i]<<" "<<unstaged[i+1]<<"\n";
+    }
+    staged.clear();
+    unstaged.clear();
+}
 int main(int argc, char const *argv[])
 {
     chdir(getenv("dir"));
@@ -641,6 +771,10 @@ int main(int argc, char const *argv[])
     else if (!strcmp("checkout", argv[1]))
     {
         checkout(argv);
+    }
+    else if (!strcmp("status", argv[1]))
+    {
+        status();
     }
     else
     {
