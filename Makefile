@@ -15,8 +15,8 @@ run: clean all
 	 ./$(BIN)/$(EXECUTABLE)
 
 $(BIN)/$(EXECUTABLE): $(SRC)/*.cpp
-	$(CXX) $(CXX_FLAGS) -I$(INCLUDE) -L$(LIB) $^ -o $ ~/imperium/$(BIN)/$(EXECUTABLE) $(LIBRARIES) -lssl -lcrypto
+	$(CXX) $(CXX_FLAGS) -I$(INCLUDE) -L$(LIB) $^ -o $ ~/kronos/$(BIN)/$(EXECUTABLE) $(LIBRARIES) -lssl -lcrypto
 
 clean:
 	@echo "clean called"
-	@rm -rf -d ~/imperium/$(BIN)/*
+	@rm -rf -d ~/kronos/$(BIN)/*
