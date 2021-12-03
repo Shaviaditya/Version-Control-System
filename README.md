@@ -2,7 +2,7 @@
 
 ## Version Control System
 
-This project is a part of the 10 days of Code 2020, event organized by the GNU/LINUX USERS' GROUP, NIT Durgapur.
+This project is inspired from a similar project which was part of the popular 10 days of Code 2020, event organized by the GNU/LINUX USERS' GROUP, NIT Durgapur.
 
 Link to repository : https://github.com/lugnitdgp/TDoC-Imperium
 
@@ -40,5 +40,3 @@ Features currently under progress include :
 ```bash
 kronos revert
 ```
-
-
