@@ -22,17 +22,17 @@ std::string setPath;
 void addToCache(std::string addPath, char fileType)
 {
     struct stat p;
-    if (stat((setPath + "/.imperium/.add").c_str(), &p) != 0)
-        mkdir((setPath + "/.imperium/.add").c_str(), 0777);
+    if (stat((setPath + "/.kronos/.add").c_str(), &p) != 0)
+        mkdir((setPath + "/.kronos/.add").c_str(), 0777);
     addPath = addPath.substr(1, addPath.length() - 1);
     if (fileType == 'f')
     {
         struct stat r;
         std::string src = setPath + "/" + addPath;
-        std::string fileAdd, dest = setPath + "/.imperium/.add/" + addPath;
+        std::string fileAdd, dest = setPath + "/.kronos/.add/" + addPath;
         if (addPath.find_last_of('/') != std::string::npos)
         {
-            fileAdd = setPath + "/.imperium/.add/" + addPath.substr(0, addPath.find_last_of('/'));
+            fileAdd = setPath + "/.kronos/.add/" + addPath.substr(0, addPath.find_last_of('/'));
             std::cout << fileAdd << "\n";
             if (stat(fileAdd.c_str(), &r) != 0)
             {
@@ -45,8 +45,8 @@ void addToCache(std::string addPath, char fileType)
     {
         struct stat r;
         std::string src = setPath + "/" + addPath;
-        std::string fileAdd = setPath + "/.imperium/.add/" + addPath.substr(0, addPath.find_last_of('/'));
-        std::string dest = setPath + "/.imperium/.add/" + addPath;
+        std::string fileAdd = setPath + "/.kronos/.add/" + addPath.substr(0, addPath.find_last_of('/'));
+        std::string dest = setPath + "/.kronos/.add/" + addPath;
         if (stat(fileAdd.c_str(), &r) != 0)
         {
             fs::create_directories(fileAdd);
@@ -57,14 +57,14 @@ void addToCache(std::string addPath, char fileType)
 void addCommit(std::string addPath, char fileType, std::string commitHash)
 {
     struct stat filecheck;
-    std::string commitPath = setPath + "/.imperium/.commit";
+    std::string commitPath = setPath + "/.kronos/.commit";
     if (stat((commitPath + "/" + commitHash).c_str(), &filecheck) != 0)
         mkdir((commitPath + "/" + commitHash).c_str(), 0777);
     commitPath = commitPath + "/" + commitHash + "/";
     if (fileType == 'f')
     {
         struct stat resource;
-        std::string src = setPath + "/.imperium/.add/" + addPath;
+        std::string src = setPath + "/.kronos/.add/" + addPath;
         std::string fileAdd, dest = commitPath + addPath;
         if (addPath.find_last_of('/') != std::string::npos)
         {
@@ -80,7 +80,7 @@ void addCommit(std::string addPath, char fileType, std::string commitHash)
     else
     {
         struct stat r;
-        std::string src = setPath + "/.imperium/.add/" + addPath;
+        std::string src = setPath + "/.kronos/.add/" + addPath;
         std::string fileAdd = commitPath + addPath.substr(0, addPath.find_last_of('/')), dest = commitPath + addPath;
         if (stat(fileAdd.c_str(), &r) != 0)
         {
@@ -98,16 +98,16 @@ bool checkExistence(std::string filepath)
 
 void addPrevCommit(std::string addPath, char fileType, std::string commitHash, std::string prevHash)
 {
-    if (checkExistence(addPath) && checkExistence(".imperium/.commit/" + prevHash + "/" + addPath))
+    if (checkExistence(addPath) && checkExistence(".kronos/.commit/" + prevHash + "/" + addPath))
     {
         struct stat checkExist;
-        std::string commitPath = setPath + "/.imperium/.commit";
+        std::string commitPath = setPath + "/.kronos/.commit";
         if (stat((commitPath + "/" + commitHash).c_str(), &checkExist) != 0)
             mkdir((commitPath + "/" + commitHash).c_str(), 0777);
         if (fileType == 'f')
         {
             struct stat resource;
-            std::string commitPath = setPath + "/.imperium/.commit/";
+            std::string commitPath = setPath + "/.kronos/.commit/";
             std::string src = setPath + "/" + addPath;
             std::string fileAdd, dest = commitPath + commitHash + "/" + addPath;
             if (addPath.find_last_of('/') != std::string::npos)
@@ -124,7 +124,7 @@ void addPrevCommit(std::string addPath, char fileType, std::string commitHash, s
         else
         {
             struct stat r;
-            std::string commitPath = setPath + "/.imperium/.commit/";
+            std::string commitPath = setPath + "/.kronos/.commit/";
             std::string src = commitPath + prevHash + "/" + addPath;
             std::string fileAdd, dest = commitPath + commitHash + "/" + addPath;
             fileAdd = commitPath + commitHash + "/" + addPath.substr(0, addPath.find_last_of('/'));
@@ -143,7 +143,7 @@ void addPrevCommit(std::string addPath, char fileType, std::string commitHash, s
 bool ignoreCheck(std::string pathFile)
 {
     std::string getData;
-    std::ifstream readData(".imperiumIgnore");
+    std::ifstream readData(".kronosIgnore");
     while (getline(readData, getData))
     {
         if (pathFile.find(getData) != std::string::npos)
@@ -156,7 +156,7 @@ bool ignoreCheck(std::string pathFile)
 bool toBeIgnored(std::string pathFile)
 {
     std::string getData;
-    std::ifstream readData(setPath + "/.imperium/add.log");
+    std::ifstream readData(setPath + "/.kronos/add.log");
     while (getline(readData, getData))
     {
         if (pathFile.find(getData) != std::string::npos)
@@ -169,7 +169,7 @@ bool toBeIgnored(std::string pathFile)
 bool fileDirException(std::string getPath)
 {
     std::string getData;
-    std::ifstream readData(setPath + "/.imperium/add.log");
+    std::ifstream readData(setPath + "/.kronos/add.log");
     while (getline(readData, getData))
     {
         if ((getPath + "/").substr(0, (getData + '/').length()) == (getData + "/"))
@@ -193,7 +193,7 @@ void add(std::vector<std::string> paths)
             if (!ignoreCheck(fileCheck) && !toBeIgnored(fileCheck.substr(root.length() + 1, fileCheck.length() - (root.length() + 1))))
             {
                 std::ofstream writeData;
-                writeData.open(setPath + "/.imperium/add.log", std::ios_base::app);
+                writeData.open(setPath + "/.kronos/add.log", std::ios_base::app);
                 struct stat checkType;
                 {
                     if (stat(fileCheck.c_str(), &checkType) == 0)
@@ -263,7 +263,7 @@ void add(std::vector<std::string> paths)
                     if (toBeIgnored(it) == false)
                     {
                         std::ofstream writeData;
-                        writeData.open(setPath + "/.imperium/add.log", std::ios_base::app);
+                        writeData.open(setPath + "/.kronos/add.log", std::ios_base::app);
                         struct stat checkType;
                         {
                             if (stat((setPath + "/" + it).c_str(), &checkType) == 0)
@@ -296,7 +296,7 @@ void updateCommitLog(char const *message, std::string commitHash)
 {
     std::string line;
     std::ifstream readData;
-    readData.open(setPath + "/.imperium/.commit.log");
+    readData.open(setPath + "/.kronos/.commit.log");
     int c = 0;
     std::vector<std::string> log_cont;
     while (getline(readData, line))
@@ -311,10 +311,10 @@ void updateCommitLog(char const *message, std::string commitHash)
         }
     }
     readData.close();
-    system(("rm -r " + setPath + "/.imperium/.commit.log").c_str());
+    system(("rm -r " + setPath + "/.kronos/.commit.log").c_str());
     if (log_cont.size() == 0)
     {
-        std::ofstream writeIn(setPath + "/.imperium/.commit.log");
+        std::ofstream writeIn(setPath + "/.kronos/.commit.log");
         std::string msg = commitHash + " -- " + message + " --> HEAD";
         writeIn << msg << "\n";
         writeIn.close();
@@ -328,7 +328,7 @@ void updateCommitLog(char const *message, std::string commitHash)
         {
             stk.push(it);
         }
-        std::ofstream writeIn(setPath + "/.imperium/.commit.log");
+        std::ofstream writeIn(setPath + "/.kronos/.commit.log");
         while (!stk.empty())
         {
             writeIn << stk.front() << "\n";
@@ -346,9 +346,9 @@ void commit(int argc, char const *argv[])
         std::cout << "No Description Found!"
                   << "\n";
     }
-    else if (stat((setPath + "/.imperium").c_str(), &pathCheck) != 0)
+    else if (stat((setPath + "/.kronos").c_str(), &pathCheck) != 0)
     {
-        std::cout << "No Imperium folder found, initialise one using [ imperium init ] "
+        std::cout << "No kronos folder found, initialise one using [ kronos init ] "
                   << "\n";
     }
     else
@@ -375,17 +375,17 @@ void commit(int argc, char const *argv[])
         ss.resize(use);
         std::string hashVar = ss;
         struct stat p;
-        if (stat((setPath + "/.imperium/.commit").c_str(), &p) != 0)
+        if (stat((setPath + "/.kronos/.commit").c_str(), &p) != 0)
         {
             /*
                 This section handles first commit and creates respective folder in commit folder as well as
                 the commit log part.
             */
-            mkdir((setPath + "/.imperium/.commit").c_str(), 0777);
-            for (auto &it : fs::recursive_directory_iterator(setPath + "/.imperium/.add"))
+            mkdir((setPath + "/.kronos/.commit").c_str(), 0777);
+            for (auto &it : fs::recursive_directory_iterator(setPath + "/.kronos/.add"))
             {
                 std::string fileTypeDef = it.path();
-                std::string relativePath = fileTypeDef.substr((setPath + "./imperium/.add").length() + 1, fileTypeDef.length() - ((setPath + "./imperium/.add").length() + 1));
+                std::string relativePath = fileTypeDef.substr((setPath + "./kronos/.add").length() + 1, fileTypeDef.length() - ((setPath + "./kronos/.add").length() + 1));
                 struct stat checkType;
                 {
                     if (stat(fileTypeDef.c_str(), &checkType) == 0)
@@ -401,7 +401,7 @@ void commit(int argc, char const *argv[])
                     }
                 }
             }
-            std::string rmstr = setPath + "/.imperium/";
+            std::string rmstr = setPath + "/.kronos/";
             system(("rm -r " + rmstr + ".add").c_str());
             system(("rm -r " + rmstr + "add.log").c_str());
             updateCommitLog(argv[3], hashVar);
@@ -412,8 +412,8 @@ void commit(int argc, char const *argv[])
                 This section handles commits after 1st commit while creating new commit cehcking for files of previous commit
                 mamnaging new/old commits.
             */
-            std::string getData, commitPath1 = setPath + "/.imperium/.commit", getHash = "";
-            std::ifstream readData(setPath + "/.imperium/.commit.log");
+            std::string getData, commitPath1 = setPath + "/.kronos/.commit", getHash = "";
+            std::ifstream readData(setPath + "/.kronos/.commit.log");
             while (getline(readData, getData))
             {
                 getHash = getData.substr(0, getData.find("--") - 1);
@@ -440,12 +440,12 @@ void commit(int argc, char const *argv[])
                     }
                 }
             }
-            if (checkExistence("/.imperium/.add"))
+            if (checkExistence("/.kronos/.add"))
             {
-                for (auto &it : fs::recursive_directory_iterator(setPath + "/.imperium/.add"))
+                for (auto &it : fs::recursive_directory_iterator(setPath + "/.kronos/.add"))
                 {
                     std::string fileTypeDef = it.path();
-                    std::string relativePath = fileTypeDef.substr((setPath + "./imperium/.add").length() + 1, fileTypeDef.length() - ((setPath + "./imperium/.add").length() + 1));
+                    std::string relativePath = fileTypeDef.substr((setPath + "./kronos/.add").length() + 1, fileTypeDef.length() - ((setPath + "./kronos/.add").length() + 1));
                     struct stat checkType;
                     {
                         if (stat(fileTypeDef.c_str(), &checkType) == 0)
@@ -461,7 +461,7 @@ void commit(int argc, char const *argv[])
                         }
                     }
                 }
-                std::string rmstr = setPath + "/.imperium/";
+                std::string rmstr = setPath + "/.kronos/";
                 system(("rm -r " + rmstr + ".add").c_str());
                 // system(("rm -r " + rmstr + "add.log").c_str());
             }
@@ -472,7 +472,7 @@ void commit(int argc, char const *argv[])
 
 void getCommitLog()
 {
-    std::ifstream readFile(setPath + "/.imperium/.commit.log");
+    std::ifstream readFile(setPath + "/.kronos/.commit.log");
     std::string paths;
     while (getline(readFile, paths))
     {
@@ -484,7 +484,7 @@ void getCommitLog()
 void checkout(char const *argv[])
 {
 
-    std::string route = setPath + "/.imperium/.commit.log", check = "";
+    std::string route = setPath + "/.kronos/.commit.log", check = "";
     bool dirExist = false;
     std::ifstream readFile(route);
     while (getline(readFile, check))
@@ -497,7 +497,7 @@ void checkout(char const *argv[])
     }
     if (dirExist)
     {
-        std::string src = setPath + "/.imperium/.commit/" + argv[2];
+        std::string src = setPath + "/.kronos/.commit/" + argv[2];
         /*
         for(auto &it : fs::recursive_directory_iterator(setPath)){
             if(ignoreCheck(it.path())==false){
@@ -556,13 +556,13 @@ void checkout(char const *argv[])
 void init(std::string path)
 {
     struct stat *buf;
-    const char *cstr = (path + "/.imperium").c_str();
+    const char *cstr = (path + "/.kronos").c_str();
     if (stat(cstr, buf))
     {
-        int check = mkdir(".imperium", 0777);
+        int check = mkdir(".kronos", 0777);
         if (!check)
         {
-            int checkdir = chdir("./.imperium");
+            int checkdir = chdir("./.kronos");
             if (!checkdir)
             {
                 std::ofstream add_file("add.log");
@@ -576,12 +576,12 @@ void init(std::string path)
                 chdir("..");
             }
         }
-        if (access(".imperiumIgnore", F_OK))
+        if (access(".kronosIgnore", F_OK))
         {
-            std::ofstream add_ignore(".imperiumIgnore");
-            add_ignore << "/.imperium"
+            std::ofstream add_ignore(".kronosIgnore");
+            add_ignore << "/.kronos"
                        << "\n";
-            add_ignore << "/.imperiumIgnore"
+            add_ignore << "/.kronosIgnore"
                        << "\n";
             add_ignore << "/node_modules"
                        << "\n";
@@ -594,7 +594,7 @@ void init(std::string path)
     {
         {
             printf("Folder exists\n");
-            chdir("./imperium");
+            chdir("./kronos");
             if (access("add.log", F_OK) && access(".commit.log", F_OK))
             {
                 std::ofstream add_file("add.log");
@@ -653,7 +653,7 @@ int compareFiles(std::string path1, std::string path2)
 std::string getheadHash()
 {
     std::string getData, getHash = "";
-    std::ifstream readData(setPath + "/.imperium/.commit.log");
+    std::ifstream readData(setPath + "/.kronos/.commit.log");
     while (getline(readData, getData))
     {
         getHash = getData.substr(0, getData.find("--") - 1);
@@ -667,15 +667,15 @@ void status()
 {
     std::vector<std::string> staged, unstaged;
     std::string headHash = getheadHash();
-    if (checkExistence(".imperium/.add") && checkExistence(".imperium/.commit"))
+    if (checkExistence(".kronos/.add") && checkExistence(".kronos/.commit"))
     {
-        if (checkExistence(".imperium/add.log"))
+        if (checkExistence(".kronos/add.log"))
         {
-            std::ifstream readFile(setPath + "/.imperium/add.log");
+            std::ifstream readFile(setPath + "/.kronos/add.log");
             std::string line;
             while (getline(readFile, line))
             {
-                if (!checkExistence(".imperium/.commit/getHash/" + line))
+                if (!checkExistence(".kronos/.commit/getHash/" + line))
                 {
                     staged.push_back("created : ");
                     staged.push_back(line);
@@ -685,7 +685,7 @@ void status()
                     staged.push_back("modified : ");
                     staged.push_back(line);
                 }
-                if (compareFiles(setPath + "/" + line, setPath + "/.imperium/.add" + line))
+                if (compareFiles(setPath + "/" + line, setPath + "/.kronos/.add" + line))
                 {
                     unstaged.push_back("modified : ");
                     unstaged.push_back(line);
@@ -694,7 +694,7 @@ void status()
             readFile.close();
         }
     }
-    else if (checkExistence(".imperium/.commit"))
+    else if (checkExistence(".kronos/.commit"))
     {
         for (auto it : fs::recursive_directory_iterator(setPath))
         {
@@ -704,21 +704,21 @@ void status()
             }
             std::string ins_path = it.path();
             std::string relpath = ins_path.substr(setPath.length() + 1, ins_path.length() - setPath.length() - 1);
-            if(relpath.find(".imperium")!=std::string::npos){
+            if(relpath.find(".kronos")!=std::string::npos){
                 continue;
             }
             // std::cout << relpath << "\n";
-            std::string commitPath = setPath + "/.imperium/.commit/" + headHash + "/" + relpath;
+            std::string commitPath = setPath + "/.kronos/.commit/" + headHash + "/" + relpath;
             // auto it2 =  std::find(staged.begin(), staged.end(), relpath);
-            // std::cout<<setPath+"/"+".imperium/.commit/" + headHash + "/" + relpath<<"\n";
-            if (!checkExistence(".imperium/.commit/" + headHash + "/" + relpath))
+            // std::cout<<setPath+"/"+".kronos/.commit/" + headHash + "/" + relpath<<"\n";
+            if (!checkExistence(".kronos/.commit/" + headHash + "/" + relpath))
             {
                 unstaged.push_back("created :");
                 unstaged.push_back(relpath);
             }
             else
             {
-                if (checkExistence(".imperium/.commit/" + headHash + "/" + relpath))
+                if (checkExistence(".kronos/.commit/" + headHash + "/" + relpath))
                 {
                     if (compareFiles(it.path(), commitPath))
                     {
