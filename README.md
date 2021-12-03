@@ -30,12 +30,12 @@ imperium add [file/folder/.]
 imperium commit "[message]"
 imperium commit-log
 imperium checkout [hash]
+imperium status
 ```
 
 Features currently under progress include :
 
 ```bash
-imperium status
 imperium revert
 ```
 
