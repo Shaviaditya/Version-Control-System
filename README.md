@@ -2,7 +2,7 @@
 
 ## Version Control System
 
-This project is inspired from a project called Imperium which was part of the popular 10 days of Code 2020, event organized by the GNU/LINUX USERS' GROUP, NIT Durgapur.
+Kronos is an indigenous Version Control System(like git) written in C++. It uses various filesystem manipulation techniques and inbuilt C++17 libraries to emulate the basic functionalities of git taking advantage of the filesystem hierarchy to imitate a VCS . This project is inspired from a project called Imperium which was part of the popular 10 days of Code 2020, event organized by the GNU/LINUX USERS' GROUP, NIT Durgapur.
 
 ## Setup the project
 
