@@ -88,44 +88,55 @@ void addCommit(std::string addPath, char fileType, std::string commitHash)
     }
 }
 
+bool checkExistence(std::string filepath)
+{
+    std::string resrc = setPath+"/"+filepath;
+    struct stat buffer;
+    return (stat(resrc.c_str(),&buffer)==0);
+}
+
 void addPrevCommit(std::string addPath, char fileType, std::string commitHash, std::string prevHash)
 {
-    struct stat checkExist;
-    std::string commitPath = setPath + "/.imperium/.commit";
-    if (stat((commitPath + "/" + commitHash).c_str(), &checkExist) != 0)
-        mkdir((commitPath + "/" + commitHash).c_str(), 0777);
-    std::string rootdir = setPath + "/" + addPath;
-    if (stat(rootdir.c_str(), &checkExist) == 0)
-    {
-        if (fileType == 'f')
+    if(checkExistence(addPath)==true){
+        struct stat checkExist;
+        std::string commitPath = setPath + "/.imperium/.commit";
+        if (stat((commitPath + "/" + commitHash).c_str(), &checkExist) != 0)
+            mkdir((commitPath + "/" + commitHash).c_str(), 0777);
+        std::string rootdir = setPath + "/" + addPath;
+        if (stat(rootdir.c_str(), &checkExist) == 0)
         {
-            struct stat resource;
-            std::string commitPath = setPath + "/.imperium/.commit/";
-            std::string src = commitPath + prevHash + "/" + addPath;
-            std::string fileAdd, dest = commitPath + commitHash + "/" + addPath;
-            if (addPath.find_last_of('/') != std::string::npos)
+            if (fileType == 'f')
             {
+                struct stat resource;
+                std::string commitPath = setPath + "/.imperium/.commit/";
+                std::string src = commitPath + prevHash + "/" + addPath;
+                std::string fileAdd, dest = commitPath + commitHash + "/" + addPath;
+                if (addPath.find_last_of('/') != std::string::npos)
+                {
+                    fileAdd = commitPath + commitHash + "/" + addPath.substr(0, addPath.find_last_of('/'));
+                    // std::cout << fileAdd << "\n";
+                    if (stat(fileAdd.c_str(), &resource) != 0)
+                    {
+                        fs::create_directories(fileAdd);
+                    }
+                }
+                fs::copy_file(src, dest, fs::copy_options::overwrite_existing);
+            }
+            else
+            {
+                struct stat r;
+                std::string commitPath = setPath + "/.imperium/.commit/";
+                std::string src = commitPath + prevHash + "/" + addPath;
+                std::string fileAdd, dest = commitPath + commitHash + "/" + addPath;
                 fileAdd = commitPath + commitHash + "/" + addPath.substr(0, addPath.find_last_of('/'));
-                std::cout << fileAdd << "\n";
-                if (stat(fileAdd.c_str(), &resource) != 0)
+                if (stat(fileAdd.c_str(), &r) != 0)
                 {
                     fs::create_directories(fileAdd);
                 }
             }
-            fs::copy_file(src, dest, fs::copy_options::overwrite_existing);
         }
-        else
-        {
-            struct stat r;
-            std::string commitPath = setPath + "/.imperium/.commit/";
-            std::string src = commitPath + prevHash + "/" + addPath;
-            std::string fileAdd, dest = commitPath + commitHash + "/" + addPath;
-            fileAdd = commitPath + commitHash + "/" + addPath.substr(0, addPath.find_last_of('/'));
-            if (stat(fileAdd.c_str(), &r) != 0)
-            {
-                fs::create_directories(fileAdd);
-            }
-        }
+    } else {
+        std::cout<<"The previous values have been modified\n";
     }
 }
 
@@ -342,6 +353,9 @@ void commit(int argc, char const *argv[])
     }
     else
     {
+        /*
+            This section creates a SHA1 encrypted hash to store a unique hash for each folder/file to be commited
+        */
         auto timehash = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
         std::string ins_string = std::to_string(timehash).c_str();
         unsigned char in_buffer[40];
@@ -363,6 +377,10 @@ void commit(int argc, char const *argv[])
         struct stat p;
         if (stat((setPath + "/.imperium/.commit").c_str(), &p) != 0)
         {
+            /*
+                This section handles first commit and creates respective folder in commit folder as well as 
+                the commit log part.
+            */
             mkdir((setPath + "/.imperium/.commit").c_str(), 0777);
             for (auto &it : fs::recursive_directory_iterator(setPath + "/.imperium/.add"))
             {
@@ -390,6 +408,10 @@ void commit(int argc, char const *argv[])
         }
         else
         {
+            /*
+                This section handles commits after 1st commit while creating new commit cehcking for files of previous commit
+                mamnaging new/old commits.
+            */
             std::string getData, commitPath1 = setPath + "/.imperium/.commit", getHash = "";
             std::ifstream readData(setPath + "/.imperium/.commit.log");
             while (getline(readData, getData))
@@ -398,11 +420,11 @@ void commit(int argc, char const *argv[])
                 break;
             }
             readData.close();
-            std::string hashdir = commitPath1 + "/" + getHash;
-            for (auto &it : fs::recursive_directory_iterator(hashdir))
+            std::string prevCommitDir = commitPath1 + "/" + getHash;
+            for (auto &it : fs::recursive_directory_iterator(prevCommitDir))
             {
                 std::string fileTypeDef = it.path();
-                std::string relativePath = fileTypeDef.substr((hashdir).length() + 1, fileTypeDef.length() - ((hashdir).length() + 1));
+                std::string relativePath = fileTypeDef.substr((prevCommitDir).length() + 1, fileTypeDef.length() - ((prevCommitDir).length() + 1));
                 struct stat checkType;
                 {
                     if (stat(fileTypeDef.c_str(), &checkType) == 0)
@@ -417,6 +439,30 @@ void commit(int argc, char const *argv[])
                         }
                     }
                 }
+            }
+            if(checkExistence("/.imperium/.add")){
+                for (auto &it : fs::recursive_directory_iterator(setPath + "/.imperium/.add"))
+                {
+                    std::string fileTypeDef = it.path();
+                    std::string relativePath = fileTypeDef.substr((setPath + "./imperium/.add").length() + 1, fileTypeDef.length() - ((setPath + "./imperium/.add").length() + 1));
+                    struct stat checkType;
+                    {
+                        if (stat(fileTypeDef.c_str(), &checkType) == 0)
+                        {
+                            if (checkType.st_mode & S_IFDIR)
+                            {
+                                addCommit(relativePath, 'd', hashVar);
+                            }
+                            else if (checkType.st_mode & S_IFREG)
+                            {
+                                addCommit(relativePath, 'f', hashVar);
+                            }
+                        }
+                    }
+                }
+                std::string rmstr = setPath + "/.imperium/";
+                system(("rm -r " + rmstr + ".add").c_str());
+                system(("rm -r " + rmstr + "add.log").c_str());
             }
             updateCommitLog(argv[3], hashVar);
         }
