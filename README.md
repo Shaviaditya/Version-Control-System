@@ -31,3 +31,12 @@ imperium commit "[message]"
 imperium commit-log
 imperium checkout [hash]
 ```
+
+Features currently under progress include :
+
+```bash
+imperium status
+imperium revert
+```
+
+
